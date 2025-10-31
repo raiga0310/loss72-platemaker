@@ -1,6 +1,8 @@
 mod control;
 mod full_service;
 mod sub_parser;
+pub mod config;
+pub mod builder;
 
 use super::frontmatter::parse_toml_to_metadata;
 use full_service::MarkdownParser;

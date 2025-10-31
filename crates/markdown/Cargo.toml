@@ -14,3 +14,10 @@ toml = "0.8.19"
 loss72-platemaker-structure = { version = "0.1.0", path = "../structure" }
 syntect = "5.2.0"
 pulldown-cmark = { version = "0.13.0", features = ["serde"] }
+
+tokio = "1.48"
+futures = "0.3.31"
+reqwest = "0.12"
+
+scraper = "=0.24.0"
+serde = "=1.0.228"

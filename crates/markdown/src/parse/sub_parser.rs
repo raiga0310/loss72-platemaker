@@ -6,6 +6,8 @@ mod code_block;
 mod footnote;
 mod frontmatter;
 mod link_card;
+mod link_metadata;
+pub mod metadata_fetcher;
 mod text;
 
 pub trait SubParser<'p> {
@@ -24,10 +26,23 @@ pub struct SubParsers<'p> {
     pub footnote: footnote::FootnoteSubParser<'p>,
     pub frontmatter: frontmatter::FrontmatterSubParser,
     pub text: text::TextParser,
-    pub link_card: link_card::LinkCardParser,
+    pub link_card: link_card::LinkCardParser<'p>,
 }
 
 impl<'p> SubParsers<'p> {
+    pub fn with_metadata_fetcher(fetcher: Option<std::sync::Arc<metadata_fetcher::MetadataFetcher>>) -> Self {
+        Self {
+            code_block: code_block::CodeBlockSubParser::default(),
+            footnote: footnote::FootnoteSubParser::default(),
+            frontmatter: frontmatter::FrontmatterSubParser::default(),
+            text: text::TextParser::default(),
+            link_card: match fetcher {
+                Some(f) => link_card::LinkCardParser::with_metadata_fetcher(f),
+                None => link_card::LinkCardParser::default(),
+            },
+        }
+    }
+
     pub fn receive_event(&mut self, event: &Event<'p>) -> EventProcessControl<'p> {
         let mut next = Next::default();
         next.update_by(self.code_block.receive_event(next.next_event(event))?);
@@ -43,6 +58,7 @@ impl<'p> SubParsers<'p> {
         let mut vec = vec![];
 
         vec.append(&mut self.footnote.finalize().unwrap_or(Vec::new()));
+        vec.append(&mut self.link_card.finalize().unwrap_or(Vec::new()));
 
         vec
     }

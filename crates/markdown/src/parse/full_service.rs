@@ -42,6 +42,16 @@ impl<'p> MarkdownParser<'p> {
         }
     }
 
+    pub fn new_with_sub_parsers(content: &'p str, parser_option: Options, sub_parser: SubParsers<'p>) -> Self {
+        MarkdownParser {
+            sub_parser,
+            parser: pulldown_cmark::Parser::new_ext(content, parser_option),
+            ignore: None,
+            finalized: false,
+            last_append: VecDeque::new(),
+        }
+    }
+
     pub fn run(mut self) -> MarkdownParseResult {
         let mut html = String::new();
         pulldown_cmark::html::push_html(&mut html, self.flatten());
