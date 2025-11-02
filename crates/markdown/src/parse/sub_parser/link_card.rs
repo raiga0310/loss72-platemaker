@@ -94,17 +94,20 @@ impl<'p> SubParser<'p> for LinkCardParser<'p> {
         }
 
         match event {
-            Event::Start(Tag::Link { dest_url: url, .. }) => {
-                if self.should_create_card(url) {
-                    self.building_link = Some(LinkCardParserInfo {
-                        url: url.to_string(),
-                        title: None,
-                        events: vec![],
-                    });
-                    discard()
-                } else {
-                    use_next()
+            Event::Html(html) => {
+                // HTMLイベント内の生URLを検出
+                if let Some(url) = self.extract_url_from_text(html) {
+                    if self.should_create_card(&url) {
+                        // URLをリンクカードに変換して即座に返す
+                        let link_info = LinkCardParserInfo {
+                            url: url.clone(),
+                            title: Some(url.clone()),
+                            events: vec![],
+                        };
+                        return self.convert_link_to_html(link_info);
+                    }
                 }
+                use_next()
             }
             _ => use_next(),
         }
@@ -128,7 +131,6 @@ impl<'p> LinkCardParser<'p> {
 
         if should_end_link {
             if let Some(link) = self.building_link.take() {
-                // リンクが完成したらすぐにHTMLに変換して返す
                 return self.convert_link_to_html(link);
             }
         }
@@ -152,6 +154,19 @@ impl<'p> LinkCardParser<'p> {
 
     fn should_create_card(&self, url: &str) -> bool {
         url.starts_with("http://") || url.starts_with("https://")
+    }
+
+    fn extract_url_from_text(&self, text: &str) -> Option<String> {
+        // テキストが `https\://` または `http\://` で始まり、単体のURLの場合のみ抽出
+        let trimmed = text.trim();
+        if (trimmed.starts_with("https://") || trimmed.starts_with("http://"))
+            && !trimmed.contains(' ')
+            && trimmed.len() > 8
+        {
+            Some(trimmed.to_string())
+        } else {
+            None
+        }
     }
 }
 
@@ -201,6 +216,36 @@ mod tests {
         let control = parser.receive_event(&link_event);
         assert!(matches!(control, EventProcessControl::Continue(_)));
         assert!(parser.building_link.is_none());
+    }
+
+    #[test]
+    fn test_url_text_processing() {
+        let mut parser = LinkCardParser::default();
+
+        let text_event = Event::Text(CowStr::Borrowed("https://example.com"));
+        let control = parser.receive_event(&text_event);
+
+        if let EventProcessControl::Break(BreakingEventProcess::UseThisInstead(Event::Html(html))) =
+            control
+        {
+            assert!(html.contains("https://example.com"));
+            assert!(html.contains("link-card"));
+        } else {
+            panic!("Expected HTML event for URL text");
+        }
+    }
+
+    #[test]
+    fn test_mixed_text_passthrough() {
+        let mut parser = LinkCardParser::default();
+
+        let text_event = Event::Text(CowStr::Borrowed("Visit https://example.com for more info"));
+        let control = parser.receive_event(&text_event);
+        assert!(matches!(control, EventProcessControl::Continue(_)));
+
+        let text_event = Event::Text(CowStr::Borrowed("Just some text"));
+        let control = parser.receive_event(&text_event);
+        assert!(matches!(control, EventProcessControl::Continue(_)));
     }
 
     #[test]
