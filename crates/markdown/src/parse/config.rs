@@ -15,7 +15,7 @@ impl Default for MarkdownConfig {
             enable_link_cards: true,
             link_card_timeout_seconds: 10,
             link_card_user_agent: "loss72-platemaker/1.0".to_string(),
-            parser_options: Options::empty(),
+            parser_options: Options::ENABLE_PLUSES_DELIMITED_METADATA_BLOCKS,
         }
     }
 }

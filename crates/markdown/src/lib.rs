@@ -25,8 +25,7 @@ pub fn is_markdown_path(file: &File) -> bool {
 pub fn parse_markdown(file: &ArticleFile) -> Result<Article, MarkdownProcessError> {
     log!(step: "Parsing ./{}", file.relative_path.display());
 
-    make_article_from_markdown(file, &file.file().read_to_string()?)
-        .map_err(MarkdownProcessError::ParseError)
+    make_article_from_markdown(file).map_err(MarkdownProcessError::ParseError)
 }
 
 pub fn parse_markdown_with_link_cards(
@@ -37,14 +36,16 @@ pub fn parse_markdown_with_link_cards(
 
     let content = file.file().read_to_string()?;
     let config = config.unwrap_or_default();
-    
+
     let builder = MarkdownParserBuilder::with_config(config);
     let parsed = builder.parse(&content);
 
     let metadata = frontmatter::parse_toml_to_metadata(
-        parsed.frontmatter()
-            .ok_or(MarkdownProcessError::ParseError(ParseError::NoFrontmatter))?
-    ).map_err(MarkdownProcessError::ParseError)?;
+        parsed
+            .frontmatter()
+            .ok_or(MarkdownProcessError::ParseError(ParseError::NoFrontmatter))?,
+    )
+    .map_err(MarkdownProcessError::ParseError)?;
 
     Ok(Article {
         id: file.id.clone(),

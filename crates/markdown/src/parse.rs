@@ -1,11 +1,9 @@
+pub mod builder;
+pub mod config;
 mod control;
 mod full_service;
 mod sub_parser;
-pub mod config;
-pub mod builder;
 
-use super::frontmatter::parse_toml_to_metadata;
-use full_service::MarkdownParser;
 use loss72_platemaker_core::model::Article;
 use loss72_platemaker_structure::ArticleFile;
 
@@ -30,31 +28,9 @@ pub enum ParseError {
     InvalidToml(String),
 }
 
-pub fn make_article_from_markdown(file: &ArticleFile, content: &str) -> ParseResult<Article> {
-    let content = parse_markdown(content)?;
-    let metadata = parse_toml_to_metadata(&content.frontmatter)?;
-
-    Ok(Article {
-        id: file.id.clone(),
-        metadata,
-        content: content.html,
-    })
-}
-
-#[derive(Clone, Debug)]
-struct ParsedContent {
-    frontmatter: String,
-    html: String,
-}
-
-fn parse_markdown(content: &str) -> ParseResult<ParsedContent> {
-    let parsed = MarkdownParser::parse(content, pulldown_cmark::Options::all());
-
-    Ok(ParsedContent {
-        html: parsed.html().to_string(),
-        frontmatter: parsed
-            .frontmatter()
-            .ok_or(ParseError::NoFrontmatter)?
-            .to_string(),
-    })
+pub fn make_article_from_markdown(file: &ArticleFile) -> ParseResult<Article> {
+    let config = crate::MarkdownConfig::default();
+    let result = crate::parse_markdown_with_link_cards(file, Some(config))
+        .map_err(|e| ParseError::InvalidToml(e.to_string()))?;
+    Ok(result)
 }
