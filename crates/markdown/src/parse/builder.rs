@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use pulldown_cmark::Options;
+use std::sync::Arc;
 
 use super::{
     config::MarkdownConfig,
-    full_service::{MarkdownParser, MarkdownParseResult},
+    full_service::{MarkdownParseResult, MarkdownParser},
     sub_parser::{SubParsers, metadata_fetcher::MetadataFetcher},
 };
 
@@ -70,12 +70,12 @@ impl MarkdownParserBuilder {
         self
     }
 
-    pub fn build<'p>(self, content: &'p str) -> MarkdownParser<'p> {
+    pub fn build(self, content: &str) -> MarkdownParser<'_> {
         let sub_parsers = SubParsers::with_metadata_fetcher(self.metadata_fetcher);
         MarkdownParser::new_with_sub_parsers(content, self.config.parser_options, sub_parsers)
     }
 
-    pub fn parse<'p>(self, content: &'p str) -> MarkdownParseResult {
+    pub fn parse(self, content: &str) -> MarkdownParseResult {
         self.build(content).run()
     }
 }

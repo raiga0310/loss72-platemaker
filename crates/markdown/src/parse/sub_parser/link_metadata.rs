@@ -16,13 +16,3 @@ pub struct LinkMetadata {
     pub image: Option<String>,
     pub error_message: Option<String>,
 }
-
-#[derive(Debug, Serialize)]
-pub struct MetadataRequest {
-    pub urls: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MetadataResponse {
-    pub results: Vec<LinkMetadata>,
-}

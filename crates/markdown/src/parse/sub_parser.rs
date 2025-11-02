@@ -30,7 +30,9 @@ pub struct SubParsers<'p> {
 }
 
 impl<'p> SubParsers<'p> {
-    pub fn with_metadata_fetcher(fetcher: Option<std::sync::Arc<metadata_fetcher::MetadataFetcher>>) -> Self {
+    pub fn with_metadata_fetcher(
+        fetcher: Option<std::sync::Arc<metadata_fetcher::MetadataFetcher>>,
+    ) -> Self {
         Self {
             code_block: code_block::CodeBlockSubParser::default(),
             footnote: footnote::FootnoteSubParser::default(),
@@ -58,7 +60,6 @@ impl<'p> SubParsers<'p> {
         let mut vec = vec![];
 
         vec.append(&mut self.footnote.finalize().unwrap_or(Vec::new()));
-        vec.append(&mut self.link_card.finalize().unwrap_or(Vec::new()));
 
         vec
     }

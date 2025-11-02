@@ -1,7 +1,7 @@
-use std::time::Duration;
-use scraper::{Html, Selector};
-use tokio::time::timeout;
 use reqwest::Client;
+use scraper::{Html, Selector};
+use std::time::Duration;
+use tokio::time::timeout;
 
 use crate::parse::sub_parser::link_metadata::{LinkMetadata, MetadataStatus};
 
@@ -11,10 +11,6 @@ pub struct MetadataFetcher {
 }
 
 impl MetadataFetcher {
-    pub fn new() -> Self {
-        Self::new_with_config(&crate::parse::config::MarkdownConfig::default())
-    }
-
     pub fn new_with_config(config: &crate::parse::config::MarkdownConfig) -> Self {
         Self {
             client: Client::builder()
@@ -27,12 +23,13 @@ impl MetadataFetcher {
     }
 
     pub async fn fetch_batch(&self, urls: Vec<String>) -> Vec<LinkMetadata> {
-        let tasks: Vec<_> = urls
-            .into_iter()
-            .map(|url| self.fetch_single(url))
-            .collect();
+        let tasks: Vec<_> = urls.into_iter().map(|url| self.fetch_single(url)).collect();
 
         futures::future::join_all(tasks).await
+    }
+
+    pub async fn fetch_single_metadata(&self, url: String) -> LinkMetadata {
+        self.fetch_single(url).await
     }
 
     async fn fetch_single(&self, url: String) -> LinkMetadata {
@@ -45,16 +42,19 @@ impl MetadataFetcher {
         }
     }
 
-    async fn fetch_metadata(&self, url: &str) -> Result<LinkMetadata, Box<dyn std::error::Error + Send + Sync>> {
+    async fn fetch_metadata(
+        &self,
+        url: &str,
+    ) -> Result<LinkMetadata, Box<dyn std::error::Error + Send + Sync>> {
         let response = self.client.get(url).send().await?;
-        
+
         if !response.status().is_success() {
             return Err(format!("HTTP {}", response.status()).into());
         }
 
         let html = response.text().await?;
         let metadata = self.parse_html_metadata(&html, url)?;
-        
+
         Ok(LinkMetadata {
             url: url.to_string(),
             status: MetadataStatus::Success,
@@ -65,11 +65,15 @@ impl MetadataFetcher {
         })
     }
 
-    fn parse_html_metadata(&self, html: &str, url: &str) -> Result<ParsedMetadata, Box<dyn std::error::Error + Send + Sync>> {
+    fn parse_html_metadata(
+        &self,
+        html: &str,
+        url: &str,
+    ) -> Result<ParsedMetadata, Box<dyn std::error::Error + Send + Sync>> {
         use scraper::Html;
-        
+
         let document = Html::parse_document(html);
-        
+
         let title = self.extract_title(&document);
         let description = self.extract_description(&document);
         let image = self.extract_image(&document, url);
@@ -90,7 +94,8 @@ impl MetadataFetcher {
         }
 
         let title_selector = Selector::parse("title").ok()?;
-        document.select(&title_selector)
+        document
+            .select(&title_selector)
             .next()?
             .text()
             .collect::<String>()
@@ -108,7 +113,8 @@ impl MetadataFetcher {
         }
 
         let meta_desc_selector = Selector::parse(r#"meta[name="description"]"#).ok()?;
-        document.select(&meta_desc_selector)
+        document
+            .select(&meta_desc_selector)
             .next()?
             .value()
             .attr("content")?
